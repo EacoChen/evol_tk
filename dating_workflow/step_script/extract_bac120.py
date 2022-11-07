@@ -11,8 +11,8 @@ from tqdm import tqdm
 from dating_workflow.step_script import parse_hmmscan, run, get_seq_and_write, write_out_stats,get_genomes,get_files
 
 HOME = os.getenv("HOME")
-pfam_db = f'{HOME}/data/protein_db/bac120/Pfam.v32.sub6.hmm'
-tigfam_db = f'{HOME}/data/protein_db/bac120/TIGRFAMv14_sub114.hmm'
+pfam_db = f'{HOME}/database/bac120/Pfam.v32.sub6.hmm'
+tigfam_db = f'{HOME}/database/bac120/TIGRFAMv14_sub114.hmm'
 
 #__file__ = f'{HOME}/script/evolution_relative/dating_workflow/step_script/extrat_bac120.py'
 bac120_list = join(dirname(__file__),"data", 'bac120.tsv')
