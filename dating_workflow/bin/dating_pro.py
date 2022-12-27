@@ -255,7 +255,7 @@ def final_mcmctree(inBV, in_phyfile, in_treefile, odir, ndata, template_ctl=mcmc
     if extra_cmd is not None:
         params.extend(extra_cmd)
         
-    with mp.Pool(processes=2) as tp:
+    with mp.Pool(processes=len(params)) as tp:
         _ = list(tp.imap(run, params))
 
 
@@ -301,14 +301,14 @@ def run_nodata_prior(in_phyfile, in_treefile, odir, ndata, template_ctl=mcmc_ctl
 
 def main(in_phyfile, in_treefile, total_odir, 
          use_nucl=False, ali_dir=None, 
-         run_tmp=True, run_prior_only=True, params_dict={}):
+         run_tmp=True, tmp_dir='', run_prior_only=True, run_post_only=True, params_dict={}):
     if not exists(total_odir):
         os.makedirs(total_odir)
     ndata = get_num_phy_file(in_phyfile)
     nodata_dir = join(total_odir, 'prior')
     mcmc_for_dir = join(total_odir, 'mcmc_for')
     tmp_odir = join(total_odir, 'tmp_files')
-    for f in [nodata_dir,mcmc_for_dir,tmp_odir]:
+    for f in [nodata_dir,mcmc_for_dir]:
         if not exists(f): os.makedirs(f)
     prior_cmd = run_nodata_prior(in_phyfile=in_phyfile,
                                  in_treefile=in_treefile,
@@ -319,7 +319,8 @@ def main(in_phyfile, in_treefile, total_odir,
     if run_prior_only:
         run(prior_cmd)
         return
-    if run_tmp and not isinstance(run_tmp, str):
+    if run_tmp:
+        if not exists(tmp_odir): os.makedirs(tmp_odir)
         generate_tmp(in_phyfile,
                      in_treefile,
                      tmp_odir,
@@ -332,9 +333,11 @@ def main(in_phyfile, in_treefile, total_odir,
                      mcmc_for_dir,
                     #  extra_cmd=[prior_cmd],
                      use_nucl=use_nucl)
-    elif isinstance(run_tmp, str):
-        os.system(f"cp -rf {run_tmp}/* {tmp_odir}")
-        os.system(f"cp -rf {run_tmp}/out.BV {mcmc_for_dir}/in.BV")
+    elif tmp_dir:
+        os.symlink(tmp_dir,tmp_odir)
+        os.symlink(f"{tmp_dir}/out.BV",f"{mcmc_for_dir}/in.BV")
+        # os.system(f"cp -rf {run_tmp}/* {tmp_odir}")
+        # os.system(f"cp -rf {run_tmp}/out.BV {mcmc_for_dir}/in.BV")
         # collecting_tmp(run_tmp,
         #                tmp_odir,
         #                ali_dir=ali_dir)
@@ -345,7 +348,7 @@ def main(in_phyfile, in_treefile, total_odir,
                    ndata=ndata,
                    params_dict=params_dict,
                    use_nucl=use_nucl,
-                   extra_cmd=[prior_cmd]
+                   extra_cmd=[prior_cmd] if not run_post_only else None
                    )
 
 
@@ -384,8 +387,10 @@ def change_parameters(mcmc_for_dir,odir=None,**kwargs):
 @click.option('-id', '--in_ali_dir', 'in_ali_dir')
 @click.option('-o', 'odir')
 @click.option('-nucl', 'use_nucl', is_flag=True, default=False)
-@click.option('-no_tmp', 'run_tmp', default=True)
+@click.option('-run_tmp', 'run_tmp', default=True)
+@click.option('-tmp_dir', 'tmp_dir', default = '')
 @click.option('-only_prior', 'only_prior', is_flag=True, default=False)
+@click.option('-only_post', 'only_post', is_flag=True, default=False)
 @click.option('-sf', 'sampfreq', default='2')
 @click.option('-p', 'print_f', default='2')
 @click.option('-rg', 'rgene_gamma', default='1 35 1')
@@ -394,7 +399,7 @@ def change_parameters(mcmc_for_dir,odir=None,**kwargs):
 @click.option('-c', 'clock', default='2',help="2 indicate using IR clock model, while 3 denote AR clock model")
 def cli(in_phyfile, in_treefile, in_ali_dir,
         odir, use_nucl, 
-        run_tmp, only_prior, sampfreq, 
+        run_tmp, tmp_dir, only_prior, only_post, sampfreq, 
         print_f, rgene_gamma, sigma2_gamma, 
         bdparse,
         clock):
@@ -406,11 +411,16 @@ def cli(in_phyfile, in_treefile, in_ali_dir,
                    'sigma2_gamma': sigma2_gamma,
                    "BDparas":bdparse,
                    'clock': clock}
+
+    if not run_tmp and not tmp_dir:
+        print('Do not run codeml, neither give codeml dir')
+        return
+
     main(in_phyfile, in_treefile,
          use_nucl=use_nucl,
          ali_dir=in_ali_dir,
-         total_odir=odir, run_tmp=run_tmp, 
-         run_prior_only=only_prior, params_dict=params_dict)
+         total_odir=odir, run_tmp=run_tmp, tmp_dir=tmp_dir, 
+         run_prior_only=only_prior, run_post_only=only_post, params_dict=params_dict)
 
 
 if __name__ == "__main__":

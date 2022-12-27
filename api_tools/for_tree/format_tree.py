@@ -150,7 +150,7 @@ def add_cal_api(in_tree_file, out_newick, calibration_txt, format=0):
         if '(' in v:
             final_tree = final_tree.replace(v.replace('(', '_').replace(')', '_').replace(',', '_'),
                                             "'%s'" % v)
-    text = f'{len(t.get_leaves())}\n' + final_tree
+    text = f'{len(t.get_leaves())} 1\n' + final_tree
     with open(out_newick, 'w') as f1:
         f1.write(text)
     return text
